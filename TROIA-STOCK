@@ -1,0 +1,746 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import json
+from datetime import datetime
+import os
+import hashlib
+import re
+
+ARQUIVO_DADOS = "controle_estoque.json"
+ARQUIVO_USUARIOS = "usuarios.json"
+
+# ==============================================
+# 🌐 TRADUÇÕES
+# ==============================================
+IDIOMAS = {
+    "pt": {
+        "titulo_sistema": "TROIA ESTOQUE — Sistema de Gestão",
+        "titulo_login": "TROIA — Login",
+        "usuario": "Usuário",
+        "senha": "Senha",
+        "entrar": "Entrar",
+        "sem_conta": "Não tem conta? Cadastrar",
+        "criar_conta": "CRIAR CONTA",
+        "confirma_senha": "Confirmar senha",
+        "cadastrar": "Cadastrar",
+        "preencha_todos": "Preencha todos os campos!",
+        "senha_nao_confere": "As senhas não coincidem!",
+        "usuario_existe": "Usuário já existe!",
+        "conta_criada": "Conta criada!",
+        "sem_usuario": "Nenhum usuário cadastrado!\nClique em 'Cadastrar'.",
+        "login_erro": "Usuário ou senha incorretos!",
+        "ultima_atualizacao": "Última atualização",
+        "pesquisar": "Pesquisar (Código ou Nome)",
+        "limpar": "Limpar",
+        "novo_produto": "Novo Produto",
+        "entrada": "Entrada",
+        "venda": "Venda",
+        "excluir": "Excluir",
+        "relatorio": "Relatório",
+        "atualizar": "Atualizar",
+        "codigo": "Código",
+        "produto": "Produto",
+        "qtd": "Qtd",
+        "preco": "Preço",
+        "validade": "Validade",
+        "status": "Status",
+        "normal": "Normal",
+        "zerado": "ZERADO",
+        "pouco": "POUCO",
+        "cadastrar_produto": "Cadastrar Produto",
+        "codigo_produto": "Código do Produto",
+        "nome": "Nome",
+        "quantidade": "Quantidade",
+        "preco_r": "Preço R$",
+        "salvar": "Salvar",
+        "produto_cadastrado": "Produto cadastrado!",
+        "codigo_existe": "já cadastrado!",
+        "nome_invalido": "Nome do produto inválido!",
+        "qtd_vazia": "Quantidade não pode estar vazia!",
+        "qtd_negativa": "Quantidade não pode ser negativa!",
+        "qtd_apenas_numeros": "Quantidade deve ser apenas números!",
+        "validade_formato": "Validade: use o formato DD/MM/AAAA",
+        "preco_vazio": "Preço não pode estar vazio!",
+        "preco_maior_zero": "Preço deve ser maior que zero!",
+        "preco_invalido": "Preço deve ser um número!",
+        "entrada_mercadoria": "Entrada de Mercadoria",
+        "selecione_produto": "Selecione o produto",
+        "qtd_chegou": "Quantidade que chegou",
+        "confirmar": "Confirmar",
+        "entrada_registrada": "Entrada registrada! Total",
+        "nenhum_produto": "Nenhum produto cadastrado!",
+        "qtd_maior_zero": "Quantidade deve ser maior que zero!",
+        "valores_invalidos": "Digite valores válidos!",
+        "registrar_venda": "Registrar Venda",
+        "qtd_vendida": "Quantidade vendida",
+        "venda_registrada": "Venda registrada! Restam",
+        "nao_tem_estoque": "Estoque insuficiente! Disponível:",
+        "excluir_produto": "Excluir Produto",
+        "excluido": "Excluído",
+        "certeza": "Tem certeza? Isso não pode ser desfeito!",
+        "relatorio_vendas": "RELATÓRIO DE VENDAS",
+        "total_geral": "TOTAL GERAL",
+        "unidades": "unidades",
+        "ajustes_dados": "Ajuste os seguintes dados"
+    },
+    "en": {
+        "titulo_sistema": "TROIA STOCK — Management System",
+        "titulo_login": "TROIA — Login",
+        "usuario": "Username",
+        "senha": "Password",
+        "entrar": "Login",
+        "sem_conta": "No account? Sign up",
+        "criar_conta": "CREATE ACCOUNT",
+        "confirma_senha": "Confirm password",
+        "cadastrar": "Sign up",
+        "preencha_todos": "Fill in all fields!",
+        "senha_nao_confere": "Passwords do not match!",
+        "usuario_existe": "Username already exists!",
+        "conta_criada": "Account created!",
+        "sem_usuario": "No users registered!\nClick 'Sign up'.",
+        "login_erro": "Incorrect username or password!",
+        "ultima_atualizacao": "Last updated",
+        "pesquisar": "Search (Code or Name)",
+        "limpar": "Clear",
+        "novo_produto": "New Product",
+        "entrada": "Stock In",
+        "venda": "Sale",
+        "excluir": "Delete",
+        "relatorio": "Report",
+        "atualizar": "Refresh",
+        "codigo": "Code",
+        "produto": "Product",
+        "qtd": "Qty",
+        "preco": "Price",
+        "validade": "Expiry",
+        "status": "Status",
+        "normal": "Normal",
+        "zerado": "OUT OF STOCK",
+        "pouco": "LOW STOCK",
+        "cadastrar_produto": "Add Product",
+        "codigo_produto": "Product Code",
+        "nome": "Name",
+        "quantidade": "Quantity",
+        "preco_r": "Price $",
+        "salvar": "Save",
+        "produto_cadastrado": "Product registered!",
+        "codigo_existe": "already registered!",
+        "nome_invalido": "Invalid product name!",
+        "qtd_vazia": "Quantity cannot be empty!",
+        "qtd_negativa": "Quantity cannot be negative!",
+        "qtd_apenas_numeros": "Quantity must be a number!",
+        "validade_formato": "Expiry format: DD/MM/YYYY",
+        "preco_vazio": "Price cannot be empty!",
+        "preco_maior_zero": "Price must be greater than zero!",
+        "preco_invalido": "Price must be a valid number!",
+        "entrada_mercadoria": "Stock Entry",
+        "selecione_produto": "Select product",
+        "qtd_chegou": "Quantity received",
+        "confirmar": "Confirm",
+        "entrada_registrada": "Entry recorded! Total",
+        "nenhum_produto": "No products registered!",
+        "qtd_maior_zero": "Quantity must be greater than zero!",
+        "valores_invalidos": "Enter valid values!",
+        "registrar_venda": "Register Sale",
+        "qtd_vendida": "Quantity sold",
+        "venda_registrada": "Sale recorded! Remaining",
+        "nao_tem_estoque": "Insufficient stock! Available:",
+        "excluir_produto": "Delete Product",
+        "excluido": "Deleted",
+        "certeza": "Are you sure? This cannot be undone!",
+        "relatorio_vendas": "SALES REPORT",
+        "total_geral": "GRAND TOTAL",
+        "unidades": "units",
+        "ajustes_dados": "Please correct the following"
+    }
+}
+
+idioma_atual = "pt"
+
+def t(chave):
+    return IDIOMAS[idioma_atual].get(chave, chave)
+
+def trocar_idioma():
+    global idioma_atual
+    idioma_atual = "en" if idioma_atual == "pt" else "pt"
+    return idioma_atual
+
+# ==============================================
+# 🔒 SEGURANÇA
+# ==============================================
+def hash_senha(senha):
+    return hashlib.sha256(senha.encode()).hexdigest()
+
+def carregar_usuarios():
+    if os.path.exists(ARQUIVO_USUARIOS):
+        with open(ARQUIVO_USUARIOS, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"usuarios": []}
+
+def salvar_usuarios(dados):
+    with open(ARQUIVO_USUARIOS, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+
+def carregar():
+    if os.path.exists(ARQUIVO_DADOS):
+        with open(ARQUIVO_DADOS, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+            # Garante que todos os produtos tem campo código
+            for i, p in enumerate(dados.get("produtos", [])):
+                if "codigo" not in p or not p["codigo"]:
+                    p["codigo"] = str(p.get("id", i + 1))
+                if "vendas" not in p:
+                    p["vendas"] = []
+            return dados
+    return {"produtos": []}
+
+def salvar(dados):
+    with open(ARQUIVO_DADOS, "w", encoding="utf-8") as f:
+        json.dump(dados, f, ensure_ascii=False, indent=2)
+
+# ==============================================
+# 🖥️ TELA DE LOGIN
+# ==============================================
+class TelaLogin:
+    def __init__(self, raiz, on_login_sucesso):
+        self.raiz = raiz
+        self.on_sucesso = on_login_sucesso
+        self.raiz.geometry("450x350")
+        self.raiz.resizable(False, False)
+        self.raiz.configure(bg="#1a1a2e")
+        self.criar_tela()
+        self.atualizar_textos()
+
+    def criar_tela(self):
+        self.lbl_titulo = tk.Label(self.raiz, text="🔥 TROIA ESTOQUE",
+                 font=("Arial", 22, "bold"), bg="#1a1a2e", fg="#f5a623")
+        self.lbl_titulo.pack(pady=30)
+
+        self.btn_idioma = tk.Button(self.raiz, text="🇧🇷 PT", command=self.mudar_idioma,
+                                    bg="#f5a623", fg="white", font=("Arial", 9, "bold"))
+        self.btn_idioma.place(relx=0.92, rely=0.02)
+
+        self.caixa = tk.Frame(self.raiz, bg="#ffffff", padx=30, pady=25)
+        self.caixa.pack(pady=10)
+
+        self.lbl_user = tk.Label(self.caixa, text="Usuário:", font=("Arial", 11), bg="#ffffff")
+        self.lbl_user.grid(row=0, column=0, sticky="w", pady=5)
+        self.ent_usuario = tk.Entry(self.caixa, font=("Arial", 11), width=25)
+        self.ent_usuario.grid(row=0, column=1, pady=5)
+        self.ent_usuario.bind("<Return>", lambda e: self.ent_senha.focus())
+
+        self.lbl_pass = tk.Label(self.caixa, text="Senha:", font=("Arial", 11), bg="#ffffff")
+        self.lbl_pass.grid(row=1, column=0, sticky="w", pady=5)
+        self.ent_senha = tk.Entry(self.caixa, font=("Arial", 11), width=25, show="●")
+        self.ent_senha.grid(row=1, column=1, pady=5)
+        self.ent_senha.bind("<Return>", lambda e: self.verificar())
+
+        self.btn_entrar = tk.Button(self.caixa, text="Entrar", command=self.verificar,
+                                    bg="#f5a623", fg="white", font=("Arial", 11, "bold"), width=20)
+        self.btn_entrar.grid(row=2, column=0, columnspan=2, pady=15)
+
+        self.btn_cadastro = tk.Button(self.caixa, text="Não tem conta? Cadastrar",
+                  command=self.ir_cadastro, relief="flat", fg="#3498db")
+        self.btn_cadastro.grid(row=3, column=0, columnspan=2)
+
+    def atualizar_textos(self):
+        self.raiz.title(f"🔐 {t('titulo_login')}")
+        self.lbl_user.config(text=f"{t('usuario')}:")
+        self.lbl_pass.config(text=f"{t('senha')}:")
+        self.btn_entrar.config(text=t("entrar"))
+        self.btn_cadastro.config(text=t("sem_conta"))
+        if idioma_atual == "pt":
+            self.btn_idioma.config(text="🇧🇷 PT")
+        else:
+            self.btn_idioma.config(text="🇺🇸 EN")
+
+    def mudar_idioma(self):
+        trocar_idioma()
+        self.atualizar_textos()
+
+    def verificar(self, evento=None):
+        dados = carregar_usuarios()
+        usuario = self.ent_usuario.get().strip()
+        senha = self.ent_senha.get().strip()
+
+        if not dados["usuarios"]:
+            messagebox.showinfo("", t("sem_usuario"))
+            return
+
+        for u in dados["usuarios"]:
+            if u["usuario"] == usuario and u["senha"] == hash_senha(senha):
+                self.raiz.destroy()
+                self.on_sucesso()
+                return
+
+        messagebox.showerror("", t("login_erro"))
+
+    def ir_cadastro(self):
+        self.raiz.destroy()
+        TelaCadastro(self.on_sucesso)
+
+class TelaCadastro:
+    def __init__(self, on_login_sucesso):
+        self.on_sucesso = on_login_sucesso
+        self.raiz = tk.Tk()
+        self.raiz.geometry("480x420")
+        self.raiz.configure(bg="#1a1a2e")
+        self.criar_tela()
+        self.atualizar_textos()
+
+    def criar_tela(self):
+        self.lbl_titulo = tk.Label(self.raiz, text="🔥 CRIAR CONTA",
+                 font=("Arial", 20, "bold"), bg="#1a1a2e", fg="#f5a623")
+        self.lbl_titulo.pack(pady=20)
+
+        self.btn_idioma = tk.Button(self.raiz, text="🇧🇷 PT", command=self.mudar_idioma,
+                                    bg="#f5a623", fg="white", font=("Arial", 9, "bold"))
+        self.btn_idioma.place(relx=0.92, rely=0.02)
+
+        self.caixa = tk.Frame(self.raiz, bg="#ffffff", padx=25, pady=20)
+        self.caixa.pack()
+
+        self.lbl_user = tk.Label(self.caixa, text="Usuário:", font=("Arial", 10), bg="#ffffff")
+        self.lbl_user.grid(row=0, column=0, sticky="w", pady=4)
+        self.ent_usuario = tk.Entry(self.caixa, font=("Arial", 10), width=32)
+        self.ent_usuario.grid(row=0, column=1, pady=4)
+        self.ent_usuario.bind("<Return>", lambda e: self.ent_senha.focus())
+
+        self.lbl_pass = tk.Label(self.caixa, text="Senha:", font=("Arial", 10), bg="#ffffff")
+        self.lbl_pass.grid(row=1, column=0, sticky="w", pady=4)
+        self.ent_senha = tk.Entry(self.caixa, font=("Arial", 10), width=32, show="●")
+        self.ent_senha.grid(row=1, column=1, pady=4)
+        self.ent_senha.bind("<Return>", lambda e: self.ent_confirma.focus())
+
+        self.lbl_conf = tk.Label(self.caixa, text="Confirmar senha:", font=("Arial", 10), bg="#ffffff")
+        self.lbl_conf.grid(row=2, column=0, sticky="w", pady=4)
+        self.ent_confirma = tk.Entry(self.caixa, font=("Arial", 10), width=32, show="●")
+        self.ent_confirma.grid(row=2, column=1, pady=4)
+        self.ent_confirma.bind("<Return>", lambda e: self.cadastrar())
+
+        self.btn_cad = tk.Button(self.caixa, text="Cadastrar", command=self.cadastrar,
+                  bg="#f5a623", fg="white", font=("Arial", 11, "bold"), width=25)
+        self.btn_cad.grid(row=10, column=0, columnspan=2, pady=15)
+
+    def atualizar_textos(self):
+        self.raiz.title(f"📝 {t('criar_conta')} — TROIA")
+        self.lbl_titulo.config(text=f"🔥 {t('criar_conta')}")
+        self.lbl_user.config(text=f"{t('usuario')}:")
+        self.lbl_pass.config(text=f"{t('senha')}:")
+        self.lbl_conf.config(text=f"{t('confirma_senha')}:")
+        self.btn_cad.config(text=t("cadastrar"))
+        if idioma_atual == "pt":
+            self.btn_idioma.config(text="🇧🇷 PT")
+        else:
+            self.btn_idioma.config(text="🇺🇸 EN")
+
+    def mudar_idioma(self):
+        trocar_idioma()
+        self.atualizar_textos()
+
+    def cadastrar(self, evento=None):
+        u = self.ent_usuario.get().strip()
+        s = self.ent_senha.get().strip()
+        c = self.ent_confirma.get().strip()
+
+        if not u or not s or not c:
+            messagebox.showwarning("", t("preencha_todos"))
+            return
+        if s != c:
+            messagebox.showerror("", t("senha_nao_confere"))
+            return
+
+        dados = carregar_usuarios()
+        if any(x["usuario"] == u for x in dados["usuarios"]):
+            messagebox.showerror("", t("usuario_existe"))
+            return
+
+        dados["usuarios"].append({"usuario": u, "senha": hash_senha(s)})
+        salvar_usuarios(dados)
+        messagebox.showinfo("", t("conta_criada"))
+        self.raiz.destroy()
+        TelaLogin(tk.Tk(), TelaPrincipal)
+        self.raiz.mainloop()
+
+# ==============================================
+# 🖥️ TELA PRINCIPAL
+# ==============================================
+class TelaPrincipal:
+    def __init__(self):
+        self.raiz = tk.Tk()
+        self.raiz.geometry("950x650")
+        self.raiz.configure(bg="#f0f2f5")
+        self.criar_cabecalho()
+        self.criar_barra_pesquisa()
+        self.criar_botoes()
+        self.criar_tabela()
+        self.atualizar_tabela()
+        self.atualizar_tela()
+        self.raiz.mainloop()
+
+    def criar_cabecalho(self):
+        self.cab = tk.Frame(self.raiz, bg="#1a1a2e", height=80)
+        self.cab.pack(fill=tk.X)
+        self.cab.pack_propagate(False)
+        self.lbl_titulo = tk.Label(self.cab, text="🔥 TROIA ESTOQUE", font=("Arial", 24, "bold"),
+                 bg="#1a1a2e", fg="#f5a623")
+        self.lbl_titulo.pack(side=tk.LEFT, padx=30, pady=20)
+
+        self.btn_idioma = tk.Button(self.cab, text="🇧🇷 PT", command=self.mudar_idioma,
+                                    bg="#f5a623", fg="white", font=("Arial", 10, "bold"), padx=15, pady=5)
+        self.btn_idioma.pack(side=tk.RIGHT, padx=15, pady=20)
+
+        self.lbl_data = tk.Label(self.cab, text="", bg="#1a1a2e", fg="#aaaaaa", font=("Arial", 9))
+        self.lbl_data.pack(side=tk.RIGHT, padx=10, pady=30)
+
+    def mudar_idioma(self):
+        trocar_idioma()
+        self.atualizar_tela()
+        self.atualizar_tabela()
+
+    def atualizar_tela(self):
+        self.raiz.title(f"🔥 {t('titulo_sistema')}")
+        self.lbl_titulo.config(text="🔥 TROIA STOCK" if idioma_atual == "en" else "🔥 TROIA ESTOQUE")
+        self.lbl_data.config(text=f"{t('ultima_atualizacao')}: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        if idioma_atual == "pt":
+            self.btn_idioma.config(text="🇧🇷 PT")
+        else:
+            self.btn_idioma.config(text="🇺🇸 EN")
+        self.lbl_pesq.config(text=f"🔍 {t('pesquisar')}:")
+        self.btn_limpar.config(text=t("limpar"))
+        botoes_novos = [
+            (f"📦 {t('novo_produto')}", "#27ae60", self.janela_cadastrar),
+            (f"🔄 {t('entrada')}", "#3498db", self.janela_entrada),
+            (f"💰 {t('venda')}", "#f39c12", self.janela_vender),
+            (f"🗑️ {t('excluir')}", "#e74c3c", self.janela_excluir),
+            (f"📊 {t('relatorio')}", "#9b59b6", self.ver_relatorio),
+            (f"🔄 {t('atualizar')}", "#95a5a6", self.atualizar_tabela)
+        ]
+        for widg, (texto, cor, acao) in zip(self.botoes_widgets, botoes_novos):
+            widg.config(text=texto)
+        colunas = (t("codigo"), t("produto"), t("qtd"), t("preco"), t("validade"), t("status"))
+        for widg, nome in zip(self.tabela_cols, colunas):
+            widg.config(text=nome)
+
+    def criar_barra_pesquisa(self):
+        self.barra_pesq = tk.Frame(self.raiz, bg="#ffffff", padx=20, pady=10)
+        self.barra_pesq.pack(fill=tk.X, padx=15, pady=5)
+        self.lbl_pesq = tk.Label(self.barra_pesq, text="🔍 Pesquisar (Código ou Nome):",
+                 font=("Arial", 10, "bold"), bg="#ffffff")
+        self.lbl_pesq.pack(side=tk.LEFT)
+        self.ent_pesquisa = tk.Entry(self.barra_pesq, font=("Arial", 11), width=40)
+        self.ent_pesquisa.pack(side=tk.LEFT, padx=10)
+        self.ent_pesquisa.bind("<KeyRelease>", lambda e: self.atualizar_tabela())
+        self.btn_limpar = tk.Button(self.barra_pesq, text="Limpar", command=self.limpar_pesquisa,
+                  bg="#95a5a6", fg="white", padx=15)
+        self.btn_limpar.pack(side=tk.LEFT)
+
+    def limpar_pesquisa(self):
+        self.ent_pesquisa.delete(0, tk.END)
+        self.atualizar_tabela()
+
+    def criar_botoes(self):
+        self.barra = tk.Frame(self.raiz, bg="#ffffff", padx=20, pady=5)
+        self.barra.pack(fill=tk.X, pady=5)
+        botoes = [
+            (f"📦 {t('novo_produto')}", "#27ae60", self.janela_cadastrar),
+            (f"🔄 {t('entrada')}", "#3498db", self.janela_entrada),
+            (f"💰 {t('venda')}", "#f39c12", self.janela_vender),
+            (f"🗑️ {t('excluir')}", "#e74c3c", self.janela_excluir),
+            (f"📊 {t('relatorio')}", "#9b59b6", self.ver_relatorio),
+            (f"🔄 {t('atualizar')}", "#95a5a6", self.atualizar_tabela)
+        ]
+        self.botoes_widgets = []
+        for i, (texto, cor, acao) in enumerate(botoes):
+            btn = tk.Button(self.barra, text=texto, command=acao, bg=cor, fg="white",
+                      font=("Arial", 10, "bold"), padx=15, pady=10)
+            btn.grid(row=0, column=i, padx=5)
+            self.botoes_widgets.append(btn)
+
+    def criar_tabela(self):
+        quadro = tk.Frame(self.raiz, bg="white", padx=10, pady=10)
+        quadro.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
+        colunas = (t("codigo"), t("produto"), t("qtd"), t("preco"), t("validade"), t("status"))
+        self.tabela = ttk.Treeview(quadro, columns=colunas, show="headings", height=15)
+        self.tabela_cols = []
+        for col in colunas:
+            widg = self.tabela.heading(col, text=col)
+            self.tabela.column(col, width=130)
+            self.tabela_cols.append(widg)
+        self.tabela.pack(fill=tk.BOTH, expand=True)
+
+    def atualizar_tabela(self):
+        for item in self.tabela.get_children():
+            self.tabela.delete(item)
+        dados = carregar()
+        texto_pesq = self.ent_pesquisa.get().strip().lower() if hasattr(self, 'ent_pesquisa') else ""
+
+        for p in dados["produtos"]:
+            if texto_pesq:
+                codigo = str(p.get("codigo", "")).lower()
+                nome = p["nome"].lower()
+                if texto_pesq not in codigo and texto_pesq not in nome:
+                    continue
+
+            status = f"✅ {t('normal')}"
+            if p["quantidade"] == 0:
+                status = f"🔴 {t('zerado')}"
+            elif p["quantidade"] < 10:
+                status = f"⚠️ {t('pouco')}"
+
+            self.tabela.insert("", tk.END, values=(
+                p.get("codigo", p["id"]),
+                p["nome"],
+                p["quantidade"],
+                f"R$ {p['preco_unitario']:.2f}" if idioma_atual == "pt" else f"$ {p['preco_unitario']:.2f}",
+                p["validade"],
+                status
+            ))
+
+    def janela_cadastrar(self):
+        janela = tk.Toplevel()
+        janela.title(f"📦 {t('cadastrar_produto')}")
+        janela.geometry("420x480")
+        janela.configure(bg="#f9f9f9")
+
+        tk.Label(janela, text=f"{t('codigo_produto')}:", bg="#f9f9f9", font=("Arial", 10)).pack(pady=5)
+        ent_codigo = tk.Entry(janela, width=35)
+        ent_codigo.pack()
+
+        tk.Label(janela, text=f"{t('nome')}:", bg="#f9f9f9", font=("Arial", 10)).pack(pady=5)
+        ent_nome = tk.Entry(janela, width=35)
+        ent_nome.pack()
+
+        tk.Label(janela, text=f"{t('quantidade')}:", bg="#f9f9f9", font=("Arial", 10)).pack(pady=5)
+        ent_qtd = tk.Entry(janela, width=35)
+        ent_qtd.pack()
+
+        tk.Label(janela, text=f"{t('validade')} (DD/MM/AAAA):", bg="#f9f9f9", font=("Arial", 10)).pack(pady=5)
+        ent_val = tk.Entry(janela, width=35)
+        ent_val.pack()
+
+        tk.Label(janela, text=f"{t('preco_r')}:", bg="#f9f9f9", font=("Arial", 10)).pack(pady=5)
+        ent_preco = tk.Entry(janela, width=35)
+        ent_preco.pack()
+
+        def salvar_produto():
+            codigo = ent_codigo.get().strip()
+            nome = ent_nome.get().strip()
+            qtd_texto = ent_qtd.get().strip()
+            val = ent_val.get().strip()
+            preco_texto = ent_preco.get().strip()
+            erros = []
+
+            dados = carregar()
+            if codigo:
+                for p in dados["produtos"]:
+                    if str(p.get("codigo", "")).strip() == codigo:
+                        erros.append(f"• Código '{codigo}' {t('codigo_existe')}")
+                        break
+
+            if not nome or len(nome) < 2:
+                erros.append(f"• {t('nome_invalido')}")
+
+            qtd = 0
+            if not qtd_texto:
+                erros.append(f"• {t('qtd_vazia')}")
+            else:
+                try:
+                    qtd = int(qtd_texto)
+                    if qtd < 0:
+                        erros.append(f"• {t('qtd_negativa')}")
+                except ValueError:
+                    erros.append(f"• {t('qtd_apenas_numeros')}")
+
+            if not re.match(r"^\d{2}/\d{2}/\d{4}$", val):
+                erros.append(f"• {t('validade_formato')}")
+
+            preco = 0.0
+            if not preco_texto:
+                erros.append(f"• {t('preco_vazio')}")
+            else:
+                try:
+                    preco = float(preco_texto.replace(",", "."))
+                    if preco <= 0:
+                        erros.append(f"• {t('preco_maior_zero')}")
+                except ValueError:
+                    erros.append(f"• {t('preco_invalido')}")
+
+            if erros:
+                messagebox.showwarning(f"⚠️ {t('ajustes_dados')}", "\n".join(erros))
+                return
+
+            dados["produtos"].append({
+                "id": len(dados["produtos"]) + 1,
+                "codigo": codigo if codigo else str(len(dados["produtos"]) + 1),
+                "nome": nome,
+                "quantidade": qtd,
+                "validade": val,
+                "preco_unitario": preco,
+                "vendas": []
+            })
+            salvar(dados)
+            messagebox.showinfo("✅", t("produto_cadastrado"))
+            janela.destroy()
+            self.atualizar_tabela()
+
+        tk.Button(janela, text=t("salvar"), command=salvar_produto,
+                  bg="#27ae60", fg="white", padx=30, pady=8, font=("Arial", 11, "bold")).pack(pady=20)
+
+    def janela_entrada(self):
+        janela = tk.Toplevel()
+        janela.title(f"🔄 {t('entrada_mercadoria')}")
+        janela.geometry("400x300")
+        dados = carregar()
+        if not dados["produtos"]:
+            messagebox.showwarning("⚠️", t("nenhum_produto"))
+            janela.destroy()
+            return
+
+        tk.Label(janela, text=f"{t('selecione_produto')}:", font=("Arial", 10)).pack(pady=10)
+        lista = ttk.Combobox(janela, values=[f"{p.get('codigo', p['id'])} → {p['nome']}" for p in dados["produtos"]], width=45)
+        lista.pack(pady=5)
+
+        tk.Label(janela, text=f"{t('qtd_chegou')}:", font=("Arial", 10)).pack(pady=10)
+        ent_qtd = tk.Entry(janela, width=20)
+        ent_qtd.pack()
+
+        def adicionar():
+            if not lista.get():
+                messagebox.showwarning("⚠️", t("selecione_produto") + "!")
+                return
+            try:
+                codigo_selecionado = lista.get().split("→")[0].strip()
+                qtd = int(ent_qtd.get())
+                if qtd <= 0:
+                    messagebox.showwarning("⚠️", t("qtd_maior_zero"))
+                    return
+            except:
+                messagebox.showwarning("⚠️", t("valores_invalidos"))
+                return
+
+            dados = carregar()
+            for p in dados["produtos"]:
+                if str(p.get("codigo", p["id"])) == codigo_selecionado:
+                    p["quantidade"] += qtd
+                    salvar(dados)
+                    messagebox.showinfo("✅", f"{t('entrada_registrada')}: {p['quantidade']}")
+                    janela.destroy()
+                    self.atualizar_tabela()
+                    return
+
+        tk.Button(janela, text=t("confirmar"), command=adicionar, bg="#3498db", fg="white", padx=30, pady=8).pack(pady=20)
+
+    def janela_vender(self):
+        janela = tk.Toplevel()
+        janela.title(f"💰 {t('registrar_venda')}")
+        janela.geometry("400x320")
+        dados = carregar()
+        if not dados["produtos"]:
+            messagebox.showwarning("⚠️", t("nenhum_produto"))
+            janela.destroy()
+            return
+
+        tk.Label(janela, text=f"{t('selecione_produto')}:", font=("Arial", 10)).pack(pady=10)
+        lista = ttk.Combobox(janela, values=[f"{p.get('codigo', p['id'])} → {p['nome']} ({t('qtd')}: {p['quantidade']})" for p in dados["produtos"]], width=50)
+        lista.pack(pady=5)
+
+        tk.Label(janela, text=f"{t('qtd_vendida')}:", font=("Arial", 10)).pack(pady=10)
+        ent_qtd = tk.Entry(janela, width=20)
+        ent_qtd.pack()
+
+        def efetuar_venda():
+            if not lista.get():
+                messagebox.showwarning("⚠️", t("selecione_produto") + "!")
+                return
+            try:
+                codigo_selecionado = lista.get().split("→")[0].strip()
+                qtd = int(ent_qtd.get())
+                if qtd <= 0:
+                    messagebox.showwarning("⚠️", t("qtd_maior_zero"))
+                    return
+            except:
+                messagebox.showwarning("⚠️", t("valores_invalidos"))
+                return
+
+            dados = carregar()
+            for p in dados["produtos"]:
+                if str(p.get("codigo", p["id"])) == codigo_selecionado:
+                    if qtd > p["quantidade"]:
+                        messagebox.showerror("❌", f"{t('nao_tem_estoque')} {p['quantidade']}!")
+                        return
+                    p["quantidade"] -= qtd
+                    p["vendas"].append({
+                        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                        "quantidade": qtd,
+                        "valor_total": qtd * p["preco_unitario"]
+                    })
+                    salvar(dados)
+                    messagebox.showinfo("✅", f"{t('venda_registrada')}: {p['quantidade']}")
+                    janela.destroy()
+                    self.atualizar_tabela()
+                    return
+
+        tk.Button(janela, text=t("confirmar"), command=efetuar_venda, bg="#f39c12", fg="white", padx=30, pady=8).pack(pady=20)
+
+    def janela_excluir(self):
+        janela = tk.Toplevel()
+        janela.title(f"🗑️ {t('excluir_produto')}")
+        janela.geometry("400x250")
+        dados = carregar()
+        if not dados["produtos"]:
+            messagebox.showwarning("⚠️", t("nenhum_produto"))
+            janela.destroy()
+            return
+
+        tk.Label(janela, text=f"{t('excluir_produto')}:", font=("Arial", 10)).pack(pady=15)
+        lista = ttk.Combobox(janela, values=[f"{p.get('codigo', p['id'])} → {p['nome']}" for p in dados["produtos"]], width=45)
+        lista.pack(pady=5)
+
+        def apagar():
+            if not lista.get():
+                messagebox.showwarning("⚠️", t("selecione_produto") + "!")
+                return
+            try:
+                codigo_selecionado = lista.get().split("→")[0].strip()
+            except:
+                messagebox.showwarning("⚠️", t("valores_invalidos"))
+                return
+
+            if messagebox.askyesno("⚠️", t("certeza")):
+                dados = carregar()
+                for i, p in enumerate(dados["produtos"]):
+                    if str(p.get("codigo", p["id"])) == codigo_selecionado:
+                        nome = p["nome"]
+                        dados["produtos"].pop(i)
+                        salvar(dados)
+                        messagebox.showinfo("✅", f"{t('excluido')}: {nome}")
+                        janela.destroy()
+                        self.atualizar_tabela()
+                        return
+
+        tk.Button(janela, text=t("excluir"), command=apagar, bg="#e74c3c", fg="white", padx=30, pady=8).pack(pady=20)
+
+    def ver_relatorio(self):
+        dados = carregar()
+        total_qtd = 0
+        total_valor = 0.0
+        texto = f"📊 {t('relatorio_vendas')}\n" + "=" * 40 + "\n"
+        for p in dados["produtos"]:
+            qtd = sum(v["quantidade"] for v in p.get("vendas", []))
+            val = sum(v["valor_total"] for v in p.get("vendas", []))
+            total_qtd += qtd
+            total_valor += val
+            if qtd > 0:
+                texto += f"\n{p.get('codigo', p['id'])} - {p['nome']}: {qtd} {t('unidades')} → {'R$' if idioma_atual == 'pt' else '$'} {val:.2f}"
+        texto += f"\n\n" + "=" * 40
+        texto += f"\n💰 {t('total_geral')}: {total_qtd} {t('unidades')} | {'R$' if idioma_atual == 'pt' else '$'} {total_valor:.2f}"
+        messagebox.showinfo(f"📊 {t('relatorio')}", texto)
+
+# ==============================================
+# 🚀 INICIAR
+# ==============================================
+if __name__ == "__main__":
+    raiz_login = tk.Tk()
+    TelaLogin(raiz_login, TelaPrincipal)
+    raiz_login.mainloop()
